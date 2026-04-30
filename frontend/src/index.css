@@ -1,0 +1,156 @@
+/* src/index.css */
+@import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root, .layout {
+  height: 100%;
+}
+
+body {
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.7;
+  color: #222;
+  background-color: #fafafa;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+input:focus, button:focus, textarea:focus {
+  outline: 2px solid #0066cc;
+  outline-offset: 2px;
+}
+
+/* 테이블 공통 보완 (Layout.css 보완용) */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 20px 0;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+}
+
+th {
+  background: #0066cc;
+  color: #fff;
+  padding: 16px 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
+td {
+  padding: 14px 12px;
+  border-bottom: 1px solid #eee;
+  text-align: center;
+  transition: background 0.2s;
+}
+
+tr:hover td {
+  background-color: #f8fbff;
+}
+
+/* 상태 뱃지 */
+.status-open {
+  color: #006400;
+  font-weight: 700;
+  padding: 4px 8px;
+  background: #e6f7e6;
+  border-radius: 6px;
+}
+
+.status-closed {
+  color: #a00;
+  font-weight: 700;
+  padding: 4px 8px;
+  background: #ffe6e6;
+  border-radius: 6px;
+}
+
+/* 버튼 공통 */
+button {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.25s ease;
+}
+
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+button:disabled {
+  background: #aaa !important;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* 스크롤바 커스텀 */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #0066cc;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #0055aa;
+}
+
+/* 반응형 유틸 */
+.inner-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+@media (max-width: 768px) {
+  .inner-container {
+    padding: 0 15px;
+  }
+  
+  th, td {
+    padding: 10px 8px;
+    font-size: 0.9rem;
+  }
+  
+  button {
+    padding: 10px 16px;
+    font-size: 0.95rem;
+  }
+}
