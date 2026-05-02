@@ -83,7 +83,7 @@
 
 4) CORS 정책
 - 허용 Origin(`https://parktel-frontend-resu.onrender.com`) Preflight: `Access-Control-Allow-Origin` 정상 반환
-- 비허용 Origin(`https://evil.example`) Preflight: `Access-Control-Allow-Origin`가 비허용 Origin으로 반환됨 → **정책 미충족(취약)**
+- 비허용 Origin(`https://evil.example`) Preflight: `Access-Control-Allow-Origin` 미반환 확인 → **정책 충족(양호)**
 
 5) 인증/자동화 방어
 - `/api/auth/login` 반복 실패 6회 테스트
@@ -101,7 +101,7 @@
 | TC-03 | IN/IL | 관리자 권한화 + 전화번호 마스킹(`mypage.py`) 반영 | 양호 |
 | TC-04 | EP | 내부 예외 상세 문구 외부 노출 제거(`admin.py`, `applications.py`) | 양호 |
 | TC-05 | AU/IA | 로그인 반복 실패 시 `429` 확인(기초 rate-limit 동작) | 양호(기초) |
-| TC-06 | CF/WM | 메소드 최소화는 반영, CSRF 동등통제/Origin 강제 미흡(CORS 비허용 Origin 허용) | 취약 |
+| TC-06 | CF/WM | 메소드 최소화 + CORS 비허용 Origin 차단 확인, CSRF 동등통제는 후속 보강 필요 | 부분 양호 |
 | TC-07 | SN/AE | `/docs`·`/redoc`·`/openapi.json` 차단 + 보안헤더 운영 반영 확인 | 양호 |
 | TC-08 | XS(잠재) | 공지 입력/출력 회귀테스트는 별도 수행 필요, 코드상 정책 유지 | 양호(코드기준) |
 
@@ -117,7 +117,7 @@
 | `backend/app/routers/auth.py` | 로그인 무차별대입 방어 미흡 | in-memory rate-limit 적용(6회차 429 확인) |
 | `backend/app/routers/admin.py` | admin 부여 시 고정 비밀번호 사용 | 랜덤 임시 비밀번호 발급으로 전환 |
 | `backend/app/database.py` | DB 연결정보 fallback 허용 | `DATABASE_URL` 필수화 |
-| `backend/app/main.py` | 운영 문서 노출 가능, CORS/메소드 광범위 허용 | docs 기본 비활성화, 헤더/메소드 제한 적용(단 CORS 추가 보완 필요) |
+| `backend/app/main.py` | 운영 문서 노출 가능, CORS/메소드 광범위 허용 | docs 기본 비활성화, 헤더/메소드 제한 적용 + CORS 비허용 Origin 차단 확인 |
 | `backend/app/routers/mypage.py` | 승인자 목록/전화번호 과노출 | 관리자 전용 + 전화번호 마스킹 |
 | `backend/app/schemas.py` | 비밀번호 강도 검증 미흡 | 길이/대소문자/숫자/특수문자 강도검증 적용 |
 | `frontend/src/pages/AdminLogin.js` | 초기 비밀번호 힌트 노출 | 힌트 제거 |
@@ -148,12 +148,11 @@
 
 ## 8. 최종 결론 및 잔여 보완
 
-- **양호 확정:** BF, IN/IL, EP, SN/AE, AU(기초), WM(부분)
-- **미완료/취약:** CF/WM 영역의 CORS 정책 미충족(비허용 Origin 차단 실패), IS의 토큰 무효화 미구현
+- **양호 확정:** BF, IN/IL, EP, SN/AE, AU(기초), WM(부분), CORS Origin 제한
+- **미완료/보완 필요:** IS의 토큰 무효화 미구현, CF의 CSRF 동등통제 고도화 미반영
 - **즉시 조치 필요:**
-  1. Render 환경변수 `ALLOWED_ORIGINS`를 프론트 도메인 단일값으로 고정 후 재배포
-  2. Preflight 재검증 시 비허용 Origin에서 `Access-Control-Allow-Origin` 미반환 확인
-  3. 토큰 무효화 전략(denylist/jti) 추가 후 TC-02 재판정
+  1. 토큰 무효화 전략(denylist/jti) 추가 후 TC-02 재판정
+  2. CSRF 동등통제(Origin/Referer 검증 + 상호작용 토큰) 적용 후 TC-06 최종 양호화
 
 ---
 
