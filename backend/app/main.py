@@ -21,7 +21,24 @@ app = FastAPI(
 )
 
 # CORS 설정
-allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+
+def _parse_allowed_origins() -> list[str]:
+    raw = os.getenv("ALLOWED_ORIGINS", "")
+    origins = [origin.strip() for origin in raw.split(",") if origin.strip()]
+
+    # 보안 기본값: 와일드카드(*)는 허용하지 않음
+    origins = [origin for origin in origins if origin != "*"]
+
+    if not origins:
+        origins = [
+            "http://localhost:3000",
+            "https://parktel-frontend-resu.onrender.com",
+        ]
+
+    return origins
+
+
+allowed_origins = _parse_allowed_origins()
 
 app.add_middleware(
     CORSMiddleware,
