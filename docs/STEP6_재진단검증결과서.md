@@ -1,7 +1,7 @@
 # STEP 6 산출물: 재진단(개선 후 검증) 결과서
 
 - 프로젝트명: 주요정보통신기반시설 가이드라인 기반 Web Application 취약점 점검 및 시큐어코딩
-- 작성일: 2026-04-30
+- 작성일: 2026-04-30 (최종 업데이트: 2026-05-02)
 - 입력 문서
   - `docs/STEP4_화이트박스취약점진단수행서.md`
   - `docs/STEP5_시큐어코딩개선계획서.md`
@@ -59,49 +59,107 @@
 
 ---
 
-## 4. TC-01 ~ TC-08 재진단 상태
+## 4. 운영 URL 기준 재검증 결과(2026-05-02)
 
-| TC | 항목 | 현재 상태 | 판정 |
+- Backend: `https://parktel-backend-resu.onrender.com`
+- Frontend: `https://parktel-frontend-resu.onrender.com`
+
+### 4.1 검증 로그(HTTP 코드/헤더)
+
+1) Health Check
+- `GET /health` → `200`
+
+2) 운영 문서 노출 차단
+- `GET /docs` → `404`
+- `GET /redoc` → `404`
+- `GET /openapi.json` → `404`
+
+3) 보안 헤더
+- `Content-Security-Policy: default-src 'self'`
+- `Strict-Transport-Security: max-age=31536000; includeSubDomains`
+- `X-Frame-Options: DENY`
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: same-origin`
+
+4) CORS 정책
+- 허용 Origin(`https://parktel-frontend-resu.onrender.com`) Preflight: `Access-Control-Allow-Origin` 정상 반환
+- 비허용 Origin(`https://evil.example`) Preflight: `Access-Control-Allow-Origin`가 비허용 Origin으로 반환됨 → **정책 미충족(취약)**
+
+5) 인증/자동화 방어
+- `/api/auth/login` 반복 실패 6회 테스트
+  - 1~5회: `404`(사용자 없음)
+  - 6회: `429`(로그인 시도 과다)
+
+---
+
+## 5. TC-01 ~ TC-08 최종 판정(운영 검증 반영)
+
+| TC | 항목 | 근거 | 최종 판정 |
 |---|---|---|---|
-| TC-01 | BF | 하드코딩 비밀번호 제거 코드 반영 완료 | 통과(코드기준) |
-| TC-02 | IS | SECRET_KEY 필수화 반영, 토큰 무효화는 후속 필요 | 부분 통과 |
-| TC-03 | IN/IL | schedule-approved 관리자 권한화 + 전화번호 마스킹 반영 | 통과(코드기준) |
-| TC-04 | EP | 내부 예외 문자열 직접 노출 제거 반영 | 통과(코드기준) |
-| TC-05 | AU/IA | 로그인 시도 제한(기초) 반영, lockout/CAPTCHA는 후속 필요 | 부분 통과 |
-| TC-06 | CF/WM | 메소드 최소화 반영, CSRF 동등통제는 후속 필요 | 부분 통과 |
-| TC-07 | SN/AE | docs 비활성화 코드/보안헤더 반영(배포 검증 대기) | 검증 대기 |
-| TC-08 | XS(잠재) | 기존 양호 유지, 회귀테스트 대기 | 검증 대기 |
-
-> 주의: 일부 항목은 운영 서버 배포 후 DAST 재검증이 필요함.
+| TC-01 | BF | 하드코딩 비밀번호 제거(`init_db.py`, `auth.py`, `admin.py`) 확인 | 양호 |
+| TC-02 | IS | `SECRET_KEY` 필수화는 반영, 토큰 무효화(denylist/jti) 미구현 | 부분 양호 |
+| TC-03 | IN/IL | 관리자 권한화 + 전화번호 마스킹(`mypage.py`) 반영 | 양호 |
+| TC-04 | EP | 내부 예외 상세 문구 외부 노출 제거(`admin.py`, `applications.py`) | 양호 |
+| TC-05 | AU/IA | 로그인 반복 실패 시 `429` 확인(기초 rate-limit 동작) | 양호(기초) |
+| TC-06 | CF/WM | 메소드 최소화는 반영, CSRF 동등통제/Origin 강제 미흡(CORS 비허용 Origin 허용) | 취약 |
+| TC-07 | SN/AE | `/docs`·`/redoc`·`/openapi.json` 차단 + 보안헤더 운영 반영 확인 | 양호 |
+| TC-08 | XS(잠재) | 공지 입력/출력 회귀테스트는 별도 수행 필요, 코드상 정책 유지 | 양호(코드기준) |
 
 ---
 
-## 5. 최종 판정(현재는 전환 진행 중)
+## 6. 시큐어코딩 적용 비교표(기존 취약점 ↔ 개선 상태)
 
-- 확정 완료: BF, IN/IL, EP, WM 관련 코드 수준 개선 반영
-- 후속 필요: IS(토큰 무효화), AU/IA(고도화 통제), CF(동등통제), SN/AE(운영 반영 확인)
-- 따라서 본 문서는 "개선 반영 진행판"이며, 배포 후 최종 판정표를 한 번 더 업데이트해야 함
-
----
-
-## 6. 남은 작업 체크리스트
-
-1. 배포 반영 후 DAST 재실행
-   - `/docs`, `/redoc`, `/openapi.json` 차단 여부
-   - CSP/HSTS/XFO/XCTO/Referrer-Policy 헤더 확인
-2. 인증 보강
-   - 토큰 무효화(denylist/jti 또는 세션전략) 구현
-   - 관리자 로그인 추가 인증(재인증/2차 인증) 검토
-3. 요청 위조/자동화 보강
-   - CSRF 동등통제(예: Origin 검증 + 사용자 상호작용 토큰)
-   - lockout/captcha 등 고도화 통제 추가
-4. STEP6 최종판정표(양호/취약/N/A) 재확정 및 보고서 반영
+| 코드 위치 | 기존 취약점 | 현재 시큐어코딩 상태 |
+|---|---|---|
+| `backend/app/security.py` | `SECRET_KEY` 기본값 fallback 사용 | 환경변수 필수화(미설정 시 예외) |
+| `backend/app/init_db.py` | 초기 관리자 계정 비밀번호 하드코딩 | 초기 계정 비밀번호를 환경변수로 분리 |
+| `backend/app/routers/auth.py` | 회원가입 시 고정 초기 비밀번호(`abcd1234`) | 사용자 입력 비밀번호 해시 저장 |
+| `backend/app/routers/auth.py` | 로그인 무차별대입 방어 미흡 | in-memory rate-limit 적용(6회차 429 확인) |
+| `backend/app/routers/admin.py` | admin 부여 시 고정 비밀번호 사용 | 랜덤 임시 비밀번호 발급으로 전환 |
+| `backend/app/database.py` | DB 연결정보 fallback 허용 | `DATABASE_URL` 필수화 |
+| `backend/app/main.py` | 운영 문서 노출 가능, CORS/메소드 광범위 허용 | docs 기본 비활성화, 헤더/메소드 제한 적용(단 CORS 추가 보완 필요) |
+| `backend/app/routers/mypage.py` | 승인자 목록/전화번호 과노출 | 관리자 전용 + 전화번호 마스킹 |
+| `backend/app/schemas.py` | 비밀번호 강도 검증 미흡 | 길이/대소문자/숫자/특수문자 강도검증 적용 |
+| `frontend/src/pages/AdminLogin.js` | 초기 비밀번호 힌트 노출 | 힌트 제거 |
+| `frontend/src/services/api.js` | 운영 URL 안전성 기준 미흡 | 운영 기본 API URL HTTPS 고정 |
 
 ---
 
-## 7. 증적 참조
+## 7. 가이드라인 매핑(주요정보통신기반시설 / Python / JavaScript)
+
+- BF(취약한 비밀번호):
+  - 주요정보통신기반시설: 취약한 비밀번호 설정 금지
+  - Python 시큐어코딩: 하드코딩 자격증명 금지, 입력 비밀번호 강도검증
+  - JavaScript 시큐어코딩: UI/로그/placeholder 내 민감정보 노출 금지
+- IS(세션 관리):
+  - 주요정보통신기반시설: 세션키/토큰 안전관리
+  - Python 시큐어코딩: 비밀키 환경변수 분리, 토큰 무효화/재사용 방지
+- IL/IN(정보노출/인가):
+  - 주요정보통신기반시설: 최소권한, 개인정보 최소노출
+  - Python 시큐어코딩: 권한검사 선행, 민감정보 마스킹
+- AE/SN(관리자/전송보안):
+  - 주요정보통신기반시설: 운영 문서/관리기능 외부노출 금지, 전송구간 보안 헤더 적용
+  - Python/JavaScript 시큐어코딩: HTTPS 강제, 보안 헤더 설정
+- AU/WM/CF(자동화/메소드/요청위조):
+  - 주요정보통신기반시설: 자동화 공격 차단, 불필요 메소드 차단, 요청 위조 방지
+  - Python 시큐어코딩: rate-limit/lockout, CSRF 동등통제, CORS 최소허용
+
+---
+
+## 8. 최종 결론 및 잔여 보완
+
+- **양호 확정:** BF, IN/IL, EP, SN/AE, AU(기초), WM(부분)
+- **미완료/취약:** CF/WM 영역의 CORS 정책 미충족(비허용 Origin 차단 실패), IS의 토큰 무효화 미구현
+- **즉시 조치 필요:**
+  1. Render 환경변수 `ALLOWED_ORIGINS`를 프론트 도메인 단일값으로 고정 후 재배포
+  2. Preflight 재검증 시 비허용 Origin에서 `Access-Control-Allow-Origin` 미반환 확인
+  3. 토큰 무효화 전략(denylist/jti) 추가 후 TC-02 재판정
+
+---
+
+## 9. 증적 참조
 
 - 코드 근거: `backend/app/init_db.py`, `backend/app/routers/auth.py`, `backend/app/routers/admin.py`, `backend/app/routers/applications.py`, `backend/app/routers/mypage.py`, `backend/app/security.py`, `backend/app/database.py`, `backend/app/main.py`
 - 프론트 근거: `frontend/src/pages/Register.js`, `frontend/src/pages/AdminLogin.js`, `frontend/src/services/api.js`
-- 운영 재검증 대상: `https://parktel-backend.onrender.com/docs`, `/redoc`, `/openapi.json`, `/`
+- 운영 재검증 URL: `https://parktel-backend-resu.onrender.com`, `https://parktel-frontend-resu.onrender.com`
 - 증적 이미지: `docs/assets/SS-01` ~ `SS-05`
