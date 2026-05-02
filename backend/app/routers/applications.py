@@ -1,7 +1,7 @@
-# backend/app/routers/applications.py
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from typing import List
+import logging
 
 from .. import models, schemas
 from ..database import get_db
@@ -11,6 +11,7 @@ router = APIRouter(
     prefix="/applications",
     tags=["applications"],
 )
+
 
 @router.post("/", response_model=schemas.Application)
 def create_application(
@@ -27,7 +28,6 @@ def create_application(
         if not schedule:
             raise HTTPException(status_code=404, detail="Schedule not found")
 
-        # 중복 신청 확인
         existing = db.query(models.Application).filter(
             models.Application.user_id == current_user.id,
             models.Application.schedule_id == application.schedule_id
@@ -35,7 +35,6 @@ def create_application(
         if existing:
             raise HTTPException(status_code=400, detail="이미 신청한 스케줄입니다.")
 
-        # 정원 확인
         active_count = db.query(models.Application).filter(
             models.Application.schedule_id == application.schedule_id,
             models.Application.status.in_([models.ApplicationStatusEnum.pending, models.ApplicationStatusEnum.approved])
@@ -44,7 +43,6 @@ def create_application(
         if active_count >= schedule.capacity:
             raise HTTPException(status_code=400, detail="근무 인원이 초과되었습니다.")
 
-        # 신청서 생성
         new_app = models.Application(
             user_id=current_user.id,
             schedule_id=application.schedule_id,
@@ -58,9 +56,10 @@ def create_application(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+        logging.exception("Unexpected error while creating application")
+        raise HTTPException(status_code=500, detail="요청 처리 중 오류가 발생했습니다.")
 
 
 @router.delete("/{application_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -74,13 +73,12 @@ def cancel_application(
         application = db.query(models.Application).filter(
             models.Application.id == application_id
         ).first()
-        
+
         if not application:
             raise HTTPException(status_code=404, detail="Application not found")
         if application.user_id != current_user.id:
             raise HTTPException(status_code=403, detail="Not authorized")
-        
-        # pending 상태만 취소 가능
+
         if application.status != models.ApplicationStatusEnum.pending:
             raise HTTPException(status_code=400, detail="승인된 신청은 취소할 수 없습니다.")
 
@@ -89,9 +87,10 @@ def cancel_application(
         return {"ok": True}
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+        logging.exception("Unexpected error while cancelling application")
+        raise HTTPException(status_code=500, detail="요청 처리 중 오류가 발생했습니다.")
 
 
 @router.get("/schedule/{schedule_id}", response_model=List[schemas.Application])

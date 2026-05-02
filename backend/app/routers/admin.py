@@ -1,5 +1,7 @@
 # backend/app/routers/renew-admin.py
 from fastapi import APIRouter, Depends, HTTPException
+import logging
+import secrets
 from sqlalchemy.orm import Session, joinedload
 from typing import List
 
@@ -62,7 +64,10 @@ def grant_admin_privilege(
 
     user.role = models.UserRoleEnum.admin
     user.username = grant_data.username
-    user.hashed_password = security.get_password_hash("banquet88!")
+
+    temp_password = secrets.token_urlsafe(10)
+    user.hashed_password = security.get_password_hash(temp_password)
+    logging.warning("[SECURITY] Temporary admin password issued for user_id=%s. Must be changed at first login.", user.id)
     
     db.add(user)
     db.commit()
@@ -120,6 +125,7 @@ def update_application_status(
     except HTTPException:
         db.rollback()
         raise
-    except Exception as e:
+    except Exception:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+        logging.exception("Unexpected error while updating application status")
+        raise HTTPException(status_code=500, detail="요청 처리 중 오류가 발생했습니다.")

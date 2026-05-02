@@ -39,7 +39,7 @@ const AdminLogin = () => {
         <div style={{ marginBottom: '10px' }}>
           <input
             type="password"
-            placeholder="비밀번호 (초기: banquet88!)"
+            placeholder="비밀번호"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             style={{ width: '100%', padding: '8px' }}

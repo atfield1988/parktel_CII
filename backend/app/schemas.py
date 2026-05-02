@@ -4,6 +4,20 @@ from datetime import datetime
 from .models import UserRoleEnum, UserStatusEnum, ApplicationStatusEnum
 import re
 
+
+def validate_password_strength(value: str) -> str:
+    if len(value) < 10:
+        raise ValueError("비밀번호는 10자 이상이어야 합니다.")
+    if not re.search(r"[A-Z]", value):
+        raise ValueError("비밀번호에 영문 대문자를 포함해야 합니다.")
+    if not re.search(r"[a-z]", value):
+        raise ValueError("비밀번호에 영문 소문자를 포함해야 합니다.")
+    if not re.search(r"\d", value):
+        raise ValueError("비밀번호에 숫자를 포함해야 합니다.")
+    if not re.search(r"[^A-Za-z0-9]", value):
+        raise ValueError("비밀번호에 특수문자를 포함해야 합니다.")
+    return value
+
 # --- Schedule Schemas ---
 class ScheduleBase(BaseModel):
     title: str
@@ -42,7 +56,11 @@ class UserBase(BaseModel):
         return v
 
 class UserCreate(UserBase):
-    pass
+    password: str
+
+    @validator('password')
+    def password_validation(cls, v):
+        return validate_password_strength(v)
 
 class User(BaseModel):
     id: int
@@ -71,6 +89,10 @@ class AdminLogin(BaseModel):
 class PasswordChange(BaseModel):
     old_password: str
     new_password: str
+
+    @validator('new_password')
+    def new_password_validation(cls, v):
+        return validate_password_strength(v)
 
 # --- Application Schemas ---
 class ApplicationBase(BaseModel):

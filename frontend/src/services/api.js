@@ -10,7 +10,12 @@ const getApiBaseUrl = () => {
   }
 
   // 2. 로컬 개발 환경
-  return 'http://localhost:8000/api';
+  if (process.env.NODE_ENV === 'development') {
+    return 'http://localhost:8000/api';
+  }
+
+  // 3. 운영 기본값은 HTTPS만 허용
+  return 'https://parktel-backend.onrender.com/api';
 };
 
 const api = axios.create({

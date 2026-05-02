@@ -1,11 +1,11 @@
 # backend/app/routers/renew-mypage.py
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from typing import List
 
 from .. import models, schemas
 from ..database import get_db
-from ..dependencies import get_current_active_user
+from ..dependencies import get_current_active_user, get_current_admin_user
 
 router = APIRouter(
     prefix="/mypage",
@@ -35,7 +35,7 @@ def get_my_applications(
 def get_approved_applicants_for_schedule(
     schedule_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_active_user)
+    current_user: models.User = Depends(get_current_admin_user)
 ):
     approved_apps = db.query(models.Application).filter(
         models.Application.schedule_id == schedule_id,
@@ -44,10 +44,13 @@ def get_approved_applicants_for_schedule(
         joinedload(models.Application.user)
     ).order_by(models.Application.created_at.asc()).all()
 
+    if current_user.role not in [models.UserRoleEnum.admin, models.UserRoleEnum.super_admin]:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="관리자 권한이 필요합니다.")
+
     result = [{
         "application_id": app.id,
         "user_id": app.user.id,
-        "phone_number": app.user.phone_number,
+        "phone_number_masked": f"***-****-{app.user.phone_number[-4:]}",
         "username": app.user.username
     } for app in approved_apps]
 

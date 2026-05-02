@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 
 const Register = () => {
   const [phone_number, setPhoneNumber] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -15,15 +16,8 @@ const Register = () => {
     setLoading(true);
 
     try {
-      const response = await api.post('/auth/register', { phone_number });
-      // 서버가 initial_password를 반환하면 이를 표시
-      const initialPassword = response?.data?.initial_password;
-      alert(
-        `회원가입 신청이 완료되었습니다.\n` +
-        (initialPassword
-          ? `임시 비밀번호: [ ${initialPassword} ]\n관리자 승인 후 로그인하세요.`
-          : `관리자 승인 후 로그인하세요.`)
-      );
+      await api.post('/auth/register', { phone_number, password });
+      alert('회원가입 신청이 완료되었습니다. 관리자 승인 후 로그인하세요.');
       navigate('/login');
     } catch (err) {
       const detail = err?.response?.data?.detail;
@@ -36,7 +30,7 @@ const Register = () => {
   return (
     <div style={{ maxWidth: '400px', margin: '50px auto', padding: '20px', border: '1px solid #ddd' }}>
       <h2>회원가입</h2>
-      <p>관리자 승인을 위해 전화번호로 가입합니다.</p>
+      <p>관리자 승인을 위해 전화번호와 비밀번호를 입력해 가입합니다.</p>
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: '10px' }}>
           <input
@@ -44,6 +38,16 @@ const Register = () => {
             placeholder="전화번호 (10~11자리 숫자만)"
             value={phone_number}
             onChange={(e) => setPhoneNumber(e.target.value)}
+            style={{ width: '100%', padding: '8px' }}
+            required
+          />
+        </div>
+        <div style={{ marginBottom: '10px' }}>
+          <input
+            type="password"
+            placeholder="비밀번호 (10자+, 대/소문자, 숫자, 특수문자 포함)"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             style={{ width: '100%', padding: '8px' }}
             required
           />
